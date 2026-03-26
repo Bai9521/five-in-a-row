@@ -54,6 +54,34 @@
             color: #333;
         }
 
+        .timer {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            color: #333;
+            padding: 8px 20px;
+            background: #f5f5f5;
+            border-radius: 25px;
+        }
+
+        .timer-value {
+            font-weight: bold;
+            font-size: 1.4rem;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .timer-value.warning {
+            color: #ff6b6b;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
         .player-indicator {
             width: 30px;
             height: 30px;
@@ -192,7 +220,10 @@
             <div class="current-player">
                 当前执子:
                 <div class="player-indicator black" id="playerIndicator"></div>
-                <span id="playerText">黑方</span>
+                <span id="playerText">熊猫</span>
+            </div>
+            <div class="timer">
+                ⏱ <span class="timer-value" id="timerValue">30</span>秒
             </div>
             <button class="btn-restart" id="btnRestart">重新开始</button>
         </div>
@@ -226,12 +257,15 @@
         let board = [];
         let currentPlayer = BLACK;
         let gameOver = false;
+        let timeLeft = 30;
+        let timerInterval = null;
 
         // DOM 元素
         const canvas = document.getElementById('boardCanvas');
         const ctx = canvas.getContext('2d');
         const playerIndicator = document.getElementById('playerIndicator');
         const playerText = document.getElementById('playerText');
+        const timerValue = document.getElementById('timerValue');
         const btnRestart = document.getElementById('btnRestart');
         const btnRestartResult = document.getElementById('btnRestartResult');
         const resultMessage = document.getElementById('resultMessage');
@@ -252,12 +286,54 @@
             currentPlayer = BLACK;
             gameOver = false;
 
+            // 重置计时器
+            stopTimer();
+            timeLeft = 30;
+            updateTimerDisplay();
+            startTimer();
+
             // 重置 UI
             updatePlayerDisplay();
             resultMessage.classList.remove('show');
 
             // 绘制棋盘
             drawBoard();
+        }
+
+        // 开始计时器
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                if (timeLeft <= 0) {
+                    // 超时判负
+                    stopTimer();
+                    gameOver = true;
+                    // 当前玩家超时，对方获胜
+                    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+                    showResult(false);
+                }
+            }, 1000);
+        }
+
+        // 停止计时器
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        // 更新计时器显示
+        function updateTimerDisplay() {
+            timerValue.textContent = timeLeft;
+            if (timeLeft <= 10) {
+                timerValue.classList.add('warning');
+            } else {
+                timerValue.classList.remove('warning');
+            }
         }
 
         // 绘制棋盘
@@ -396,6 +472,7 @@
 
             // 检查胜负
             if (checkWin(row, col)) {
+                stopTimer();
                 gameOver = true;
                 showResult(false);
                 return;
@@ -403,13 +480,16 @@
 
             // 检查平局
             if (checkDraw()) {
+                stopTimer();
                 gameOver = true;
                 showResult(true);
                 return;
             }
 
-            // 切换玩家
+            // 切换玩家并重置计时器
             currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+            timeLeft = 30;
+            updateTimerDisplay();
             updatePlayerDisplay();
         }
 
