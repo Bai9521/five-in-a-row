@@ -147,6 +147,24 @@
             transform: translateY(0);
         }
 
+        .btn-mode {
+            padding: 10px 20px;
+            font-size: 1rem;
+            background: #2196f3;
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-mode:hover {
+            background: #1976d2;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
         .game-board {
             background: #deb887;
             border-radius: 8px;
@@ -247,6 +265,7 @@
             <div class="timer">
                 ⏱ <span class="timer-value" id="timerValue">30</span>秒
             </div>
+            <button class="btn-mode" id="btnMode">模式: VS AI</button>
             <button class="btn-start" id="btnStart">开始游戏</button>
             <button class="btn-restart" id="btnRestart">重新开始</button>
         </div>
@@ -276,6 +295,13 @@
         const BLACK = 1;
         const WHITE = 2;
 
+        // AI 模式
+        const AI_MODE = {
+            NONE: 0,      // 无AI
+            RANDOM: 1    // 随机落子
+        };
+        let aiMode = AI_MODE.RANDOM;
+
         // 游戏状态
         let board = [];
         let currentPlayer = BLACK;
@@ -290,6 +316,7 @@
         const playerIndicator = document.getElementById('playerIndicator');
         const playerText = document.getElementById('playerText');
         const timerValue = document.getElementById('timerValue');
+        const btnMode = document.getElementById('btnMode');
         const btnStart = document.getElementById('btnStart');
         const btnRestart = document.getElementById('btnRestart');
         const btnRestartResult = document.getElementById('btnRestartResult');
@@ -321,9 +348,26 @@
             updatePlayerDisplay();
             resultMessage.classList.remove('show');
             btnStart.style.display = 'inline-block';
+            updateModeButton();
 
             // 绘制棋盘
             drawBoard();
+        }
+
+        // 切换游戏模式
+        function toggleMode() {
+            if (gameStarted) return; // 游戏开始后不能切换
+            if (aiMode === AI_MODE.RANDOM) {
+                aiMode = AI_MODE.NONE;
+            } else {
+                aiMode = AI_MODE.RANDOM;
+            }
+            updateModeButton();
+        }
+
+        // 更新模式按钮文字
+        function updateModeButton() {
+            btnMode.textContent = aiMode === AI_MODE.RANDOM ? '模式: VS AI' : '模式: 双人';
         }
 
         // 开始游戏
@@ -368,6 +412,52 @@
             } else {
                 timerValue.classList.remove('warning');
             }
+        }
+
+        // AI 随机落子
+        function aiMove() {
+            if (gameOver || aiMode === AI_MODE.NONE) return;
+
+            // 找到所有空位
+            const emptyPositions = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === EMPTY) {
+                        emptyPositions.push({ row: i, col: j });
+                    }
+                }
+            }
+
+            if (emptyPositions.length === 0) return;
+
+            // 随机选择一个空位
+            const randomPos = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
+
+            // AI 落子
+            board[randomPos.row][randomPos.col] = currentPlayer;
+            drawPiece(randomPos.row, randomPos.col, currentPlayer);
+
+            // 检查胜负
+            if (checkWin(randomPos.row, randomPos.col)) {
+                stopTimer();
+                gameOver = true;
+                showResult(false);
+                return;
+            }
+
+            // 检查平局
+            if (checkDraw()) {
+                stopTimer();
+                gameOver = true;
+                showResult(true);
+                return;
+            }
+
+            // 切换玩家并重置计时器
+            currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+            timeLeft = 30;
+            updateTimerDisplay();
+            updatePlayerDisplay();
         }
 
         // 绘制棋盘
@@ -530,6 +620,9 @@
             timeLeft = 30;
             updateTimerDisplay();
             updatePlayerDisplay();
+
+            // AI 响应（延迟一点让玩家看到局面）
+            setTimeout(aiMove, 500);
         }
 
         // 检查胜利
@@ -594,6 +687,7 @@
 
         // 绑定事件
         canvas.addEventListener('click', handleClick);
+        btnMode.addEventListener('click', toggleMode);
         btnStart.addEventListener('click', startGame);
         btnRestart.addEventListener('click', initGame);
         btnRestartResult.addEventListener('click', initGame);
