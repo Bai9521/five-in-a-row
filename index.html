@@ -298,9 +298,9 @@
         // AI 模式
         const AI_MODE = {
             NONE: 0,      // 无AI
-            RANDOM: 1    // 随机落子
+            SMART: 1    // 智能封堵
         };
-        let aiMode = AI_MODE.RANDOM;
+        let aiMode = AI_MODE.SMART;
 
         // 游戏状态
         let board = [];
@@ -357,17 +357,17 @@
         // 切换游戏模式
         function toggleMode() {
             if (gameStarted) return; // 游戏开始后不能切换
-            if (aiMode === AI_MODE.RANDOM) {
+            if (aiMode === AI_MODE.SMART) {
                 aiMode = AI_MODE.NONE;
             } else {
-                aiMode = AI_MODE.RANDOM;
+                aiMode = AI_MODE.SMART;
             }
             updateModeButton();
         }
 
         // 更新模式按钮文字
         function updateModeButton() {
-            btnMode.textContent = aiMode === AI_MODE.RANDOM ? '模式: VS AI' : '模式: 双人';
+            btnMode.textContent = aiMode === AI_MODE.SMART ? '模式: VS AI' : '模式: 双人';
         }
 
         // 开始游戏
@@ -414,31 +414,19 @@
             }
         }
 
-        // AI 随机落子
+        // AI 落子（智能封堵）
         function aiMove() {
             if (gameOver || aiMode === AI_MODE.NONE) return;
 
-            // 找到所有空位
-            const emptyPositions = [];
-            for (let i = 0; i < BOARD_SIZE; i++) {
-                for (let j = 0; j < BOARD_SIZE; j++) {
-                    if (board[i][j] === EMPTY) {
-                        emptyPositions.push({ row: i, col: j });
-                    }
-                }
-            }
-
-            if (emptyPositions.length === 0) return;
-
-            // 随机选择一个空位
-            const randomPos = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
+            // 找到最佳落子位置
+            const bestMove = findBestMove();
 
             // AI 落子
-            board[randomPos.row][randomPos.col] = currentPlayer;
-            drawPiece(randomPos.row, randomPos.col, currentPlayer);
+            board[bestMove.row][bestMove.col] = currentPlayer;
+            drawPiece(bestMove.row, bestMove.col, currentPlayer);
 
             // 检查胜负
-            if (checkWin(randomPos.row, randomPos.col)) {
+            if (checkWin(bestMove.row, bestMove.col)) {
                 stopTimer();
                 gameOver = true;
                 showResult(false);
@@ -458,6 +446,160 @@
             timeLeft = 30;
             updateTimerDisplay();
             updatePlayerDisplay();
+        }
+
+        // 找到最佳落子位置
+        function findBestMove() {
+            const opponent = BLACK; // 玩家是黑棋（熊猫）
+            let bestScore = -1;
+            let bestMoves = [];
+
+            // 遍历所有空位
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === EMPTY) {
+                        // 检查是否是有效位置（周围有棋子）
+                        if (hasNeighbor(i, j)) {
+                            const score = evaluatePosition(i, j, opponent);
+                            if (score > bestScore) {
+                                bestScore = score;
+                                bestMoves = [{ row: i, col: j }];
+                            } else if (score === bestScore) {
+                                bestMoves.push({ row: i, col: j });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 如果有评分高于0的位置，选择最高分
+            if (bestScore > 0 && bestMoves.length > 0) {
+                return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+            }
+
+            // 否则返回随机空位
+            return getRandomEmptyPosition();
+        }
+
+        // 检查位置周围是否有棋子
+        function hasNeighbor(row, col) {
+            for (let dr = -2; dr <= 2; dr++) {
+                for (let dc = -2; dc <= 2; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    const r = row + dr;
+                    const c = col + dc;
+                    if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE) {
+                        if (board[r][c] !== EMPTY) return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // 评估位置得分（防守为主）
+        function evaluatePosition(row, col, opponent) {
+            let score = 0;
+            const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+
+            for (const [dr, dc] of directions) {
+                // 检查玩家连子情况
+                const playerCount = countConsecutive(row, col, dr, dc, opponent);
+                const playerOpen = countOpenEnds(row, col, dr, dc, opponent);
+
+                // 根据连子数和开放端计算防守分数
+                if (playerCount >= 4) {
+                    score += 10000; // 即将五连，必须阻挡
+                } else if (playerCount === 3 && playerOpen >= 1) {
+                    score += 1000; // 活四，必须阻挡
+                } else if (playerCount === 3 && playerOpen === 0) {
+                    score += 500; // 冲四
+                } else if (playerCount === 2 && playerOpen >= 2) {
+                    score += 200; // 活三
+                } else if (playerCount === 2 && playerOpen === 1) {
+                    score += 100; // 眠三
+                } else if (playerCount === 1 && playerOpen >= 2) {
+                    score += 50; // 活二
+                }
+
+                // 反方向检查
+                const playerCount2 = countConsecutive(row, col, -dr, -dc, opponent);
+                const playerOpen2 = countOpenEnds(row, col, -dr, -dc, opponent);
+
+                if (playerCount2 >= 4) {
+                    score += 10000;
+                } else if (playerCount2 === 3 && playerOpen2 >= 1) {
+                    score += 1000;
+                } else if (playerCount2 === 3 && playerOpen2 === 0) {
+                    score += 500;
+                } else if (playerCount2 === 2 && playerOpen2 >= 2) {
+                    score += 200;
+                } else if (playerCount2 === 2 && playerOpen2 === 1) {
+                    score += 100;
+                } else if (playerCount2 === 1 && playerOpen2 >= 2) {
+                    score += 50;
+                }
+            }
+
+            return score;
+        }
+
+        // 计算连续同色棋子数
+        function countConsecutive(row, col, dr, dc, player) {
+            let count = 0;
+            let r = row + dr;
+            let c = col + dc;
+            while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === player) {
+                count++;
+                r += dr;
+                c += dc;
+            }
+            return count;
+        }
+
+        // 计算开放端（两端是否为空）
+        function countOpenEnds(row, col, dr, dc, player) {
+            let openEnds = 0;
+
+            // 正方向
+            let r = row + dr;
+            let c = col + dc;
+            if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === EMPTY) {
+                openEnds++;
+            }
+
+            // 反方向
+            r = row - dr;
+            c = col - dc;
+            if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === EMPTY) {
+                openEnds++;
+            }
+
+            return openEnds;
+        }
+
+        // 获取随机空位
+        function getRandomEmptyPosition() {
+            const emptyPositions = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                for (let j = 0; j < BOARD_SIZE; j++) {
+                    if (board[i][j] === EMPTY && hasNeighbor(i, j)) {
+                        emptyPositions.push({ row: i, col: j });
+                    }
+                }
+            }
+
+            if (emptyPositions.length === 0) {
+                // 如果没有邻近的位置，随机选一个
+                for (let i = 0; i < BOARD_SIZE; i++) {
+                    for (let j = 0; j < BOARD_SIZE; j++) {
+                        if (board[i][j] === EMPTY) {
+                            emptyPositions.push({ row: i, col: j });
+                        }
+                    }
+                }
+            }
+
+            return emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
         }
 
         // 绘制棋盘
