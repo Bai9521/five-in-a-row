@@ -57,17 +57,22 @@
         .player-indicator {
             width: 30px;
             height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
             border-radius: 50%;
             border: 2px solid #333;
-            transition: background-color 0.3s ease;
-        }
-
-        .player-indicator.black {
-            background: #000;
-        }
-
-        .player-indicator.white {
             background: #fff;
+            transition: all 0.3s ease;
+        }
+
+        .player-indicator.black::after {
+            content: '🐼';
+        }
+
+        .player-indicator.white::after {
+            content: '🦊';
         }
 
         .btn-restart {
@@ -156,20 +161,17 @@
 
         .result-box .winner-text .winner-color {
             display: inline-block;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            border: 2px solid #333;
+            font-size: 24px;
             vertical-align: middle;
             margin: 0 8px;
         }
 
-        .result-box .winner-color.black {
-            background: #000;
+        .result-box .winner-color.black::after {
+            content: '🐼';
         }
 
-        .result-box .winner-color.white {
-            background: #fff;
+        .result-box .winner-color.white::after {
+            content: '🦊';
         }
 
         .result-box .btn-restart {
@@ -318,7 +320,7 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
             ctx.fill();
 
-            // 棋子本体
+            // 棋子背景圆形
             const gradient = ctx.createRadialGradient(x - 5, y - 5, 0, x, y, radius);
             if (player === BLACK) {
                 gradient.addColorStop(0, '#444');
@@ -333,21 +335,30 @@
             ctx.fillStyle = gradient;
             ctx.fill();
 
-            // 棋子高光
-            ctx.beginPath();
-            ctx.arc(x - 5, y - 5, radius * 0.3, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fill();
+            // 绘制熊猫或狐狸emoji
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            if (player === BLACK) {
+                // 熊猫 - 深色背景用白色文字
+                ctx.fillStyle = '#fff';
+                ctx.fillText('🐼', x, y + 1);
+            } else {
+                // 狐狸 - 浅色背景用深色文字
+                ctx.fillStyle = '#333';
+                ctx.fillText('🦊', x, y + 1);
+            }
         }
 
         // 更新玩家显示
         function updatePlayerDisplay() {
             if (currentPlayer === BLACK) {
                 playerIndicator.className = 'player-indicator black';
-                playerText.textContent = '黑方';
+                playerText.textContent = '熊猫';
             } else {
                 playerIndicator.className = 'player-indicator white';
-                playerText.textContent = '白方';
+                playerText.textContent = '狐狸';
             }
         }
 
@@ -455,7 +466,7 @@
                 winnerText.innerHTML = '<span class="draw-message">棋盘已满，双方不分胜负</span>';
             } else {
                 resultTitle.textContent = '游戏结束';
-                const winnerName = currentPlayer === BLACK ? '黑方' : '白方';
+                const winnerName = currentPlayer === BLACK ? '熊猫' : '狐狸';
                 const winnerClass = currentPlayer === BLACK ? 'black' : 'white';
                 winnerText.innerHTML = `获胜方: <span class="winner-color ${winnerClass}"></span>${winnerName}`;
             }
