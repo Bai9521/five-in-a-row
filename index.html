@@ -307,7 +307,7 @@
         let currentPlayer = BLACK;
         let gameOver = false;
         let gameStarted = false;
-        let timeLeft = 30;
+        let timeLeft = 45;
         let timerInterval = null;
 
         // DOM 元素
@@ -341,7 +341,7 @@
 
             // 重置计时器（不启动）
             stopTimer();
-            timeLeft = 30;
+            timeLeft = 45;
             updateTimerDisplay();
 
             // 重置 UI
@@ -443,7 +443,7 @@
 
             // 切换玩家并重置计时器
             currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-            timeLeft = 30;
+            timeLeft = 45;
             updateTimerDisplay();
             updatePlayerDisplay();
         }
@@ -759,7 +759,7 @@
 
             // 切换玩家并重置计时器
             currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-            timeLeft = 30;
+            timeLeft = 45;
             updateTimerDisplay();
             updatePlayerDisplay();
 
